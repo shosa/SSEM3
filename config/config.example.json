@@ -1,0 +1,20 @@
+{
+  "aurora": {
+    "username": "",
+    "password": "",
+    "plants": [
+      { "entityId": "14354021", "name": "Pizzuti" },
+      { "entityId": "14349631", "name": "Vasca" }
+    ],
+    "updateInterval": 300
+  },
+  "fusion": {
+    "enabled": false,
+    "subdomain": "uni005eu5",
+    "username": "",
+    "password": "",
+    "plantName": "Giumentare",
+    "plantId": "main",
+    "updateInterval": 300
+  }
+}

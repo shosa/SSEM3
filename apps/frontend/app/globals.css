@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: #f0f4f8;
+  }
+}
+
+@layer utilities {
+  .card-enter {
+    animation: cardEnter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .card-enter-1 { animation-delay: 0.05s; }
+  .card-enter-2 { animation-delay: 0.10s; }
+  .card-enter-3 { animation-delay: 0.15s; }
+  .card-enter-4 { animation-delay: 0.20s; }
+
+  @keyframes cardEnter {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)   scale(1);    }
+  }
+
+  .pulse-online {
+    animation: pulseOnline 2s ease-in-out infinite;
+  }
+  @keyframes pulseOnline {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+    50%       { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  }
+
+  .stat-enter {
+    animation: statEnter 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes statEnter {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-alarm {
+    animation: cardAlarm 1.2s ease-in-out infinite;
+  }
+  @keyframes cardAlarm {
+    0%, 100% { background-color: #ffffff; }
+    50%       { background-color: #ef4444; }
+  }
+  .card-alarm .alarm-name   { transition: color 0.3s; }
+  .card-alarm .alarm-power  { transition: color 0.3s; }
+  .card-alarm .alarm-sub    { transition: color 0.3s; }
+}
