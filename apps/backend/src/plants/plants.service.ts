@@ -121,9 +121,9 @@ export class PlantsService implements OnModuleInit {
     const totalPower = plants.reduce((sum, p) => sum + (p.isOnline ? p.power : 0), 0);
     return {
       totalPlants: plants.length,
-      onlinePlants: plants.filter((p) => p.isOnline && p.power > 0).length,
-      warningPlants: plants.filter((p) => p.isOnline && p.power === 0).length,
-      offlinePlants: plants.filter((p) => !p.isOnline).length,
+      onlinePlants: plants.filter((p) => p.status === 'online').length,
+      warningPlants: plants.filter((p) => p.status === 'warning').length,
+      offlinePlants: plants.filter((p) => p.status === 'offline').length,
       totalPower: Math.round(totalPower * 100) / 100,
       updateInterval: this.config.updateInterval,
     };

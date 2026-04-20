@@ -88,7 +88,7 @@ export default function PlantCard({ plant, index = 0, updateInterval }: {
       <div className="px-6 py-5">
         <div className="flex items-baseline gap-2">
           <span className="text-5xl font-black tabular-nums leading-none" style={{ color: nameColor }}>
-            {plant.isOnline ? plant.power.toFixed(2) : '—'}
+            {plant.isOnline && plant.power != null ? plant.power.toFixed(2) : '—'}
           </span>
           <span className="text-xl font-semibold" style={{ color: subColor }}>kW</span>
         </div>
