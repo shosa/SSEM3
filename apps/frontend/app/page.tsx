@@ -123,12 +123,22 @@ export default function Dashboard() {
       )}
 
       {/* Stat cards */}
-      {status && (
+      {status && (() => {
+        const STALE_MIN = 70;
+        const isPlantStale = (p: PlantState) =>
+          !!p.lastValidReading &&
+          Math.floor((Date.now() - new Date(p.lastValidReading).getTime()) / 60000) >= STALE_MIN;
+
+        const attenzionePlants = plants.filter(p => p.status === 'warning' || isPlantStale(p)).length;
+        const onlinePlants     = plants.filter(p => p.status === 'online' && !isPlantStale(p)).length;
+        const offlinePlants    = plants.filter(p => p.status === 'offline').length;
+
+        return (
         <div className="grid grid-cols-3 gap-5 mb-10">
           {[
-            { value: status.onlinePlants,  label: 'Impianti Online',        accent: '#10b981', text: '#059669' },
-            { value: status.warningPlants, label: 'Impianti in Attenzione', accent: '#f59e0b', text: '#d97706' },
-            { value: status.offlinePlants, label: 'Impianti Offline',       accent: '#ef4444', text: '#dc2626' },
+            { value: onlinePlants,      label: 'Impianti Online',        accent: '#10b981', text: '#059669' },
+            { value: attenzionePlants,  label: 'Impianti in Attenzione', accent: '#f59e0b', text: '#d97706' },
+            { value: offlinePlants,     label: 'Impianti Offline',       accent: '#ef4444', text: '#dc2626' },
           ].map(({ value, label, accent, text }, i) => (
             <div
               key={label}
@@ -142,7 +152,8 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-      )}
+        );
+      })()}
 
       {/* Plant grid */}
       {plants.length === 0 ? (
@@ -173,43 +184,65 @@ export default function Dashboard() {
 
       {/* Legend */}
       {plants.length > 0 && (
-        <div className="mt-10 bg-white shadow-sm px-6 py-4 stat-enter" style={{ animationDelay: '0.3s' }}>
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-300 mb-3">Legenda</p>
-          <div className="flex flex-wrap gap-x-6 gap-y-2.5 items-start text-xs text-gray-400">
+        <div className="mt-10 bg-white shadow-sm p-6 stat-enter" style={{ animationDelay: '0.3s' }}>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-300 mb-5">Come leggere il pannello</p>
 
-            {/* Stato */}
-            {[
-              { color: '#10b981', label: 'ONLINE',   desc: 'in produzione' },
-              { color: '#f59e0b', label: 'INATTIVO', desc: 'connesso, potenza zero' },
-              { color: '#ef4444', label: 'OFFLINE',  desc: 'non raggiungibile' },
-              { color: '#94a3b8', label: 'AVVIO',    desc: 'prima lettura in corso' },
-            ].map(({ color, label, desc }) => (
-              <span key={label} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                <span className="font-bold text-gray-600">{label}</span>
-                <span>{desc}</span>
-              </span>
-            ))}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
 
-            <span className="w-px h-4 bg-gray-200 self-center mx-1" />
+            {/* Col 1 — Stato impianto */}
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Stato impianto</p>
+              <div className="space-y-2.5">
+                {[
+                  { color: '#10b981', label: 'ONLINE',   desc: "L'impianto sta producendo energia regolarmente." },
+                  { color: '#f59e0b', label: 'INATTIVO', desc: "L'impianto è raggiungibile ma non sta producendo (es. di notte o con cielo coperto)." },
+                  { color: '#ef4444', label: 'OFFLINE',  desc: "L'impianto non risponde. Potrebbe esserci un problema di connessione o all'impianto stesso." },
+                  { color: '#94a3b8', label: 'AVVIO',    desc: 'Il sistema si sta connettendo per la prima volta. Attendere qualche secondo.' },
+                ].map(({ color, label, desc }) => (
+                  <div key={label} className="flex items-start gap-2.5">
+                    <span className="w-3 h-3 rounded-full flex-shrink-0 mt-0.5" style={{ background: color }} />
+                    <div>
+                      <span className="text-xs font-black text-gray-700">{label} </span>
+                      <span className="text-xs text-gray-400">{desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-            {/* Badge stale */}
-            <span className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#fef3c7', color: '#b45309' }}>~Xm fa</span>
-              <span>dato in cache — bucket orario non ancora aggiornato dall'API</span>
-            </span>
+            {/* Col 2 — Indicatori sulla card */}
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Indicatori sulla scheda</p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-xs font-black px-2.5 py-1 rounded-full flex-shrink-0" style={{ background: '#dcfce7', color: '#15803d' }}>IN TEMPO REALE</span>
+                  <p className="text-xs text-gray-400">Il valore mostrato è aggiornato e corrisponde alla situazione attuale dell'impianto.</p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="text-xs font-black px-2.5 py-1 rounded-full flex-shrink-0" style={{ background: '#fef3c7', color: '#b45309' }}>ATTENZIONE</span>
+                  <p className="text-xs text-gray-400">Il valore mostrato (barrato) è l'ultimo disponibile ma non è recente. Il sistema non ha ancora ricevuto un aggiornamento nuovo dall'impianto.</p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="text-xs font-black px-2.5 py-1 rounded-full flex-shrink-0 whitespace-nowrap" style={{ background: '#fef3c7', color: '#b45309' }}>~2h fa</span>
+                  <p className="text-xs text-gray-400">Indica da quanto tempo risale l'ultimo valore ricevuto. Più il numero è alto, meno il dato è affidabile.</p>
+                </div>
+              </div>
+            </div>
 
-            <span className="w-px h-4 bg-gray-200 self-center mx-1" />
-
-            {/* Note provider */}
-            <span className="flex items-center gap-1.5">
-              <span className="font-bold text-blue-600">Aurora</span>
-              <span>valori aggregati per ora solare</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="font-bold text-blue-600">Fusion</span>
-              <span>Huawei aggiorna ogni ~25 min — impostare intervallo &ge;1500 s</span>
-            </span>
+            {/* Col 3 — Note sui sistemi */}
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Note sui sistemi</p>
+              <div className="space-y-4 text-xs text-gray-400">
+                <div>
+                  <p className="font-black text-gray-600 mb-1">Impianti Aurora</p>
+                  <p>I valori di potenza vengono aggiornati una volta ogni ora. È normale che il dato mostrato abbia fino a un'ora di ritardo rispetto alla produzione reale.</p>
+                </div>
+                <div>
+                  <p className="font-black text-gray-600 mb-1">Impianti Fusion (Huawei)</p>
+                  <p>Il portale Huawei invia nuovi dati ogni 25 minuti circa, indipendentemente da quanto spesso il sistema controlla. Si consiglia di impostare la frequenza di controllo a 25 minuti o più per evitare verifiche inutili.</p>
+                </div>
+              </div>
+            </div>
 
           </div>
         </div>

@@ -111,7 +111,10 @@ export default function PlantCard({ plant, index = 0, updateInterval }: {
         <div className="flex items-baseline gap-3">
           <span
             className="text-5xl font-black tabular-nums leading-none"
-            style={{ color: isStale ? '#d97706' : nameColor }}
+            style={{
+              color: isStale ? '#d97706' : nameColor,
+              textDecoration: isStale && plant.type === 'aurora' ? 'line-through' : 'none',
+            }}
           >
             {plant.isOnline && plant.power != null ? plant.power.toFixed(2) : '—'}
           </span>
