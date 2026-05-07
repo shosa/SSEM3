@@ -10,6 +10,7 @@ export interface PlantState {
   status: PlantStatus;
   isOnline: boolean;
   lastUpdate: string | null;
+  lastValidReading: string | null;
   errorMessage: string | null;
   consecutiveFailures: number;
 }

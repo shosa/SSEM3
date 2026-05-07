@@ -15,6 +15,7 @@ export class AuroraProvider implements OnModuleInit, OnModuleDestroy {
   private lastLogin: Date | null = null;
   private readonly sessionTtl = 45 * 60 * 1000; // 45 min, ri-login proattivo
   private renewTimer: NodeJS.Timeout | null = null;
+  private powerCache = new Map<string, { value: number; readAt: Date }>();
 
   constructor(private readonly config: ConfigService) {
     this.jar = new CookieJar();
@@ -77,7 +78,7 @@ export class AuroraProvider implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async fetchPlantData(entityId: string): Promise<{ power: number; energyToday: number }> {
+  async fetchPlantData(entityId: string): Promise<{ power: number; energyToday: number; powerReadAt?: string }> {
     try {
       await this.ensureSession();
     } catch (e) {
@@ -90,28 +91,69 @@ export class AuroraProvider implements OnModuleInit, OnModuleDestroy {
       this.fetchEnergyToday(entityId),
     ]);
 
-    return { power, energyToday };
+    const cached = this.powerCache.get(entityId);
+    return { power, energyToday, powerReadAt: cached?.readAt.toISOString() };
+  }
+
+  private async fetchWithRetry<T>(fetcher: () => Promise<T>, retries = 2): Promise<T> {
+    let lastError: Error;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await fetcher();
+      } catch (e) {
+        lastError = e;
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  private startOfDay(): Date {
+    // Mezzanotte ora italiana = 22:00 UTC del giorno precedente
+    const now = new Date();
+    const sdt = new Date(now);
+    sdt.setUTCHours(22, 0, 0, 0);
+    if (sdt > now) sdt.setUTCDate(sdt.getUTCDate() - 1);
+    return sdt;
   }
 
   private async fetchPower(entityId: string): Promise<number> {
     const now = new Date();
-    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
 
     try {
-      const response = await this.http.get(`${TELEMETRY_BASE}/${entityId}/power/GenerationPower`, {
-        params: {
-          agp: 'Hour',
-          afx: 'Max',
-          sdt: twoHoursAgo.toISOString(),
-          edt: now.toISOString(),
-        },
-      });
+      const response = await this.fetchWithRetry(() =>
+        this.http.get(`${TELEMETRY_BASE}/${entityId}/power/GenerationPower`, {
+          params: {
+            agp: 'Hour',
+            afx: 'Max',
+            sdt: this.startOfDay().toISOString(),
+            edt: now.toISOString(),
+          },
+        }),
+      );
 
-      const data: { value: number; units: string }[] = response.data;
-      if (!data || data.length === 0) return 0;
+      const data: { value?: number; units: string; end?: string }[] = Array.isArray(response.data) ? response.data : [];
+      const valid = data.filter(d => typeof d.value === 'number');
+      this.logger.debug(`Aurora [${entityId}] bucket oggi: ${data.length}, con valore: ${valid.length}`);
 
-      const last = data[data.length - 1];
-      return last.units === 'watts' ? last.value / 1000 : last.value;
+      if (valid.length > 0) {
+        const last = valid[valid.length - 1];
+        const kw = last.units === 'watts' ? last.value / 1000 : last.value;
+        const readAt = last.end ? new Date(last.end) : now;
+        this.powerCache.set(entityId, { value: kw, readAt });
+        return kw;
+      }
+
+      // Nessun bucket valido oggi — fallback cache (es. prima dell'alba)
+      const cached = this.powerCache.get(entityId);
+      if (cached) {
+        this.logger.debug(`Aurora [${entityId}] nessun dato oggi, uso cache: ${cached.value.toFixed(2)} kW`);
+        return cached.value;
+      }
+
+      return 0;
     } catch (e) {
       if (e.response?.status === 401 || e.response?.status === 403) {
         this.lastLogin = null;
@@ -132,21 +174,20 @@ export class AuroraProvider implements OnModuleInit, OnModuleDestroy {
     edt.setUTCMilliseconds(edt.getUTCMilliseconds() - 1);
 
     try {
-      const response = await this.http.get(
-        `${TELEMETRY_BASE}/${entityId}/energy/GenerationEnergy`,
-        {
+      const response = await this.fetchWithRetry(() =>
+        this.http.get(`${TELEMETRY_BASE}/${entityId}/energy/GenerationEnergy`, {
           params: {
             agp: 'Day',
             afx: 'Delta',
             sdt: sdt.toISOString(),
             edt: edt.toISOString(),
           },
-        },
+        }),
       );
 
-      const data: { value: number }[] = response.data;
+      const data: { value?: number }[] = response.data;
       if (!data || data.length === 0) return 0;
-      return data[0].value;
+      return typeof data[0].value === 'number' ? data[0].value : 0;
     } catch (e) {
       if (e.response?.status === 401 || e.response?.status === 403) {
         this.lastLogin = null;

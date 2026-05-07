@@ -3,4 +3,5 @@ dist/
 .next/
 *.log
 config/config.json
+apps/backend/config/config.json
 .env

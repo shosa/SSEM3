@@ -13,6 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-[#f0f4f8]">
         <Navbar />
         <main className="w-full px-8 py-8">{children}</main>
+        <footer className="w-full text-center py-4 text-xs text-gray-400">
+          Software sviluppato da @StefanoSolidoro &lt;<a href="mailto:kishosa@me.com" className="hover:text-gray-600 transition-colors">kishosa@me.com</a>&gt;
+        </footer>
       </body>
     </html>
   );

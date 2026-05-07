@@ -33,6 +33,7 @@ export class PlantsService implements OnModuleInit {
         status: 'initializing',
         isOnline: false,
         lastUpdate: null,
+        lastValidReading: null,
         errorMessage: null,
         consecutiveFailures: 0,
       });
@@ -48,6 +49,7 @@ export class PlantsService implements OnModuleInit {
         status: 'initializing',
         isOnline: false,
         lastUpdate: null,
+        lastValidReading: null,
         errorMessage: null,
         consecutiveFailures: 0,
       });
@@ -56,7 +58,7 @@ export class PlantsService implements OnModuleInit {
 
   private applyResult(
     id: string,
-    result: { power: number; energyToday: number } | null,
+    result: { power: number; energyToday: number; powerReadAt?: string } | null,
     error?: string,
   ) {
     const plant = this.plants.get(id);
@@ -69,6 +71,7 @@ export class PlantsService implements OnModuleInit {
       plant.status = result.power > 0 ? 'online' : 'warning';
       plant.consecutiveFailures = 0;
       plant.errorMessage = null;
+      plant.lastValidReading = result.powerReadAt ?? new Date().toISOString();
     } else {
       plant.consecutiveFailures++;
       plant.isOnline = false;

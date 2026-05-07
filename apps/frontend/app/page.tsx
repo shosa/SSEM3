@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { PlantState, SystemStatus, AppConfig, fetchPlants, fetchStatus, forceUpdate, fetchConfig } from '@/lib/api';
-import { useAlarm } from '@/lib/useAlarm';
+import { useAlarm, loadAlarmSettings } from '@/lib/useAlarm';
 import PlantCard from '@/components/PlantCard';
 
 const REFRESH_INTERVAL = 30_000;
@@ -23,8 +23,9 @@ export default function Dashboard() {
   const evaluateAlarm = useCallback((plants: PlantState[]) => {
     if (silenced) return;
 
+    const alarmSettings = loadAlarmSettings();
     const hasOffline = plants.some(p => p.status === 'offline');
-    const hasZero = plants.some(p => p.status === 'warning');
+    const hasZero = alarmSettings.alarmOnZeroPower && plants.some(p => p.status === 'warning');
 
     const newState = hasOffline ? 'offline' : hasZero ? 'zero' : 'none';
 
@@ -167,6 +168,50 @@ export default function Dashboard() {
               }
             />
           ))}
+        </div>
+      )}
+
+      {/* Legend */}
+      {plants.length > 0 && (
+        <div className="mt-10 bg-white shadow-sm px-6 py-4 stat-enter" style={{ animationDelay: '0.3s' }}>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-300 mb-3">Legenda</p>
+          <div className="flex flex-wrap gap-x-6 gap-y-2.5 items-start text-xs text-gray-400">
+
+            {/* Stato */}
+            {[
+              { color: '#10b981', label: 'ONLINE',   desc: 'in produzione' },
+              { color: '#f59e0b', label: 'INATTIVO', desc: 'connesso, potenza zero' },
+              { color: '#ef4444', label: 'OFFLINE',  desc: 'non raggiungibile' },
+              { color: '#94a3b8', label: 'AVVIO',    desc: 'prima lettura in corso' },
+            ].map(({ color, label, desc }) => (
+              <span key={label} className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                <span className="font-bold text-gray-600">{label}</span>
+                <span>{desc}</span>
+              </span>
+            ))}
+
+            <span className="w-px h-4 bg-gray-200 self-center mx-1" />
+
+            {/* Badge stale */}
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#fef3c7', color: '#b45309' }}>~Xm fa</span>
+              <span>dato in cache — bucket orario non ancora aggiornato dall'API</span>
+            </span>
+
+            <span className="w-px h-4 bg-gray-200 self-center mx-1" />
+
+            {/* Note provider */}
+            <span className="flex items-center gap-1.5">
+              <span className="font-bold text-blue-600">Aurora</span>
+              <span>valori aggregati per ora solare</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="font-bold text-blue-600">Fusion</span>
+              <span>Huawei aggiorna ogni ~25 min — impostare intervallo &ge;1500 s</span>
+            </span>
+
+          </div>
         </div>
       )}
     </div>

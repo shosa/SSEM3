@@ -7,6 +7,7 @@ export interface PlantState {
   status: 'online' | 'warning' | 'offline' | 'initializing';
   isOnline: boolean;
   lastUpdate: string | null;
+  lastValidReading: string | null;
   errorMessage: string | null;
   consecutiveFailures: number;
 }

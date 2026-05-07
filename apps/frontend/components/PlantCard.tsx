@@ -15,7 +15,24 @@ export default function PlantCard({ plant, index = 0, updateInterval }: {
   index?: number;
   updateInterval?: number;
 }) {
-  const s = STATUS[plant.status] ?? STATUS.offline;
+  const readingAgeMin = plant.lastValidReading
+    ? Math.floor((Date.now() - new Date(plant.lastValidReading).getTime()) / 60000)
+    : null;
+
+  const STALE_THRESHOLD_MIN = 70;
+  const isStale = readingAgeMin !== null && readingAgeMin >= STALE_THRESHOLD_MIN;
+  const isRealtime = readingAgeMin !== null && readingAgeMin < STALE_THRESHOLD_MIN;
+
+  const ageDisplay = readingAgeMin !== null
+    ? readingAgeMin >= 60
+      ? `~${Math.floor(readingAgeMin / 60)}h fa`
+      : `~${readingAgeMin}m fa`
+    : null;
+
+  const baseStatus = STATUS[plant.status] ?? STATUS.offline;
+  const s = isStale && plant.status === 'online'
+    ? { accent: '#f59e0b', label: 'ONLINE', textColor: '#d97706', bg: '#fffbeb' }
+    : baseStatus;
   const isAlarm = plant.status === 'offline';
   const [flash, setFlash] = useState(false);
 
@@ -82,15 +99,40 @@ export default function PlantCard({ plant, index = 0, updateInterval }: {
         >
           {s.label}
         </span>
+        {isStale && (
+          <span className="text-xs font-black tracking-widest px-2.5 py-1 rounded-full" style={{ background: '#fef3c7', color: '#b45309' }}>
+            ATTENZIONE
+          </span>
+        )}
       </div>
 
       {/* Power */}
       <div className="px-6 py-5">
-        <div className="flex items-baseline gap-2">
-          <span className="text-5xl font-black tabular-nums leading-none" style={{ color: nameColor }}>
+        <div className="flex items-baseline gap-3">
+          <span
+            className="text-5xl font-black tabular-nums leading-none"
+            style={{ color: isStale ? '#d97706' : nameColor }}
+          >
             {plant.isOnline && plant.power != null ? plant.power.toFixed(2) : '—'}
           </span>
           <span className="text-xl font-semibold" style={{ color: subColor }}>kW</span>
+          {isStale && ageDisplay && (
+            <span
+              className="text-xs font-black px-3 py-1 rounded-full"
+              style={{ background: '#fef3c7', color: '#b45309' }}
+              title={`Ultima lettura reale: ${new Date(plant.lastValidReading!).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`}
+            >
+              {ageDisplay}
+            </span>
+          )}
+          {isRealtime && (
+            <span
+              className="text-xs font-black px-3 py-1 rounded-full"
+              style={{ background: '#dcfce7', color: '#15803d' }}
+            >
+              IN TEMPO REALE
+            </span>
+          )}
         </div>
       </div>
 
